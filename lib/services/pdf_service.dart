@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models/card_data.dart';
 import '../models/layout_config.dart';
@@ -15,7 +14,22 @@ class PdfService {
 
     // A4 size in points (1 mm = 2.83465 points)
     const double mmToPoints = 2.83465;
-    
+
+    // Bilder vorladen (pw.Document kann keine FutureBuilder verwenden)
+    final List<pw.ImageProvider?> imageProviders = List<pw.ImageProvider?>.filled(cards.length, null);
+    for (var i = 0; i < cards.length; i++) {
+      final path = cards[i].imagePath;
+      if (path != null) {
+        try {
+          final bytes = await File(path).readAsBytes();
+          imageProviders[i] = pw.MemoryImage(bytes);
+        } catch (e) {
+          // Wenn das Lesen fehlschlägt, bleibt der Eintrag null
+          imageProviders[i] = null;
+        }
+      }
+    }
+
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
@@ -31,13 +45,15 @@ class PdfService {
             childAspectRatio: layoutConfig.cardWidth / layoutConfig.cardHeight,
             crossAxisSpacing: layoutConfig.horizontalSpacing * mmToPoints,
             mainAxisSpacing: layoutConfig.verticalSpacing * mmToPoints,
-            children: cards.map((card) {
+            children: List.generate(cards.length, (index) {
+              final card = cards[index];
               return _buildPdfCard(
                 card: card,
                 width: layoutConfig.cardWidth * mmToPoints,
                 height: layoutConfig.cardHeight * mmToPoints,
+                imageProvider: imageProviders[index],
               );
-            }).toList(),
+            }),
           );
         },
       ),
@@ -61,6 +77,7 @@ class PdfService {
     required CardData card,
     required double width,
     required double height,
+    pw.ImageProvider? imageProvider,
   }) {
     return pw.Container(
       width: width,
@@ -73,19 +90,11 @@ class PdfService {
           // Image area
           pw.Expanded(
             flex: 3,
-            child: card.imagePath != null
-                ? pw.FutureBuilder<pw.ImageProvider>(
-                    future: _loadImage(card.imagePath!),
-                    builder: (context, imageData) {
-                      if (imageData != null) {
-                        return pw.Image(imageData, fit: pw.BoxFit.cover);
-                      }
-                      return pw.Container(color: PdfColors.grey100);
-                    },
-                  )
+            child: imageProvider != null
+                ? pw.Image(imageProvider, fit: pw.BoxFit.cover)
                 : pw.Container(color: PdfColors.grey100),
           ),
-          
+
           // Text area
           pw.Expanded(
             flex: 2,
@@ -104,11 +113,5 @@ class PdfService {
         ],
       ),
     );
-  }
-
-  static Future<pw.ImageProvider> _loadImage(String path) async {
-    final file = File(path);
-    final bytes = await file.readAsBytes();
-    return pw.MemoryImage(bytes);
   }
 }
