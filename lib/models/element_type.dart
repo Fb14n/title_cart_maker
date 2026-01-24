@@ -1,0 +1,4 @@
+enum ElementType {
+  image,
+  text,
+}

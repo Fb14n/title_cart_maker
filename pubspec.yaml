@@ -53,6 +53,7 @@ dependencies:
   # UI utilities
   desktop_drop: ^0.4.4
   dotted_border: ^2.1.0
+  flex_color_picker: ^3.5.1
 
 dev_dependencies:
   flutter_test:

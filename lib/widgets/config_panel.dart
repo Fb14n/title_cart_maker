@@ -115,6 +115,43 @@ class ConfigPanel extends StatelessWidget {
                 );
               },
             ),
+            
+            const Divider(),
+            const SizedBox(height: 8),
+            
+            // Total cards info and add button
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Gesamt: ${provider.cards.length} Karten',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                Text(
+                  '${(provider.cards.length / config.totalCards).ceil()} Seiten',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      provider.addMoreCards(config.totalCards);
+                    },
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Seite hinzufügen', style: TextStyle(fontSize: 12)),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         );
       },

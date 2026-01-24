@@ -5,6 +5,8 @@ import 'dart:io';
 import '../providers/project_provider.dart';
 import '../models/card_data.dart';
 import '../models/text_mode.dart';
+import '../models/card_element.dart';
+import '../models/element_type.dart';
 
 class CardPreview extends StatelessWidget {
   final int index;
@@ -23,122 +25,94 @@ class CardPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ProjectProvider>();
-    final isIndividualMode = provider.textMode == TextMode.individual;
+    final layout = cardData.getEffectiveLayout();
     
     return GestureDetector(
-      onTap: isIndividualMode ? () => _showEditDialog(context, provider) : null,
+      onTap: () {
+        // Select card for editing in right panel
+        provider.setSelectedCardIndex(index);
+      },
       child: Container(
         width: width,
         height: height,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: layout.backgroundColor ?? Colors.white,
           border: Border.all(color: Colors.grey[300]!),
         ),
-        child: Column(
-          children: [
-            // Image area
-            Expanded(
-              flex: 3,
-              child: Container(
-                color: Colors.grey[100],
-                child: cardData.imagePath != null
-                    ? Image.file(
-                        File(cardData.imagePath!),
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Center(
-                            child: Icon(Icons.broken_image, color: Colors.grey),
-                          );
-                        },
-                      )
-                    : Center(
-                        child: Icon(
-                          Icons.add_photo_alternate,
-                          color: Colors.grey[400],
-                          size: 32,
-                        ),
-                      ),
-              ),
-            ),
-            
-            // Text area
-            Expanded(
-              flex: 2,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                alignment: Alignment.center,
-                child: Text(
-                  cardData.text.isEmpty ? 'Text hier...' : cardData.text,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: cardData.text.isEmpty ? Colors.grey : Colors.black,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ),
-          ],
+        child: Stack(
+          children: layout.elements.map((element) {
+            return _buildElement(element);
+          }).toList(),
         ),
       ),
     );
   }
-
-  void _showEditDialog(BuildContext context, ProjectProvider provider) {
-    final textController = TextEditingController(text: cardData.text);
+  
+  Widget _buildElement(CardElement element) {
+    final left = element.position.dx * width;
+    final top = element.position.dy * height;
+    final elementWidth = element.size.width * width;
+    final elementHeight = element.size.height * height;
     
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Karte ${index + 1} bearbeiten'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: textController,
-              decoration: const InputDecoration(
-                labelText: 'Text',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () async {
-                final result = await FilePicker.platform.pickFiles(
-                  type: FileType.image,
-                );
-                
-                if (result != null && result.files.single.path != null) {
-                  provider.updateCardImage(index, result.files.single.path!);
-                }
-              },
-              icon: const Icon(Icons.image),
-              label: const Text('Bild auswählen'),
-            ),
-            if (cardData.imagePath != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Aktuelles Bild: ${cardData.imagePath!.split(Platform.pathSeparator).last}',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ],
+    return Positioned(
+      left: left,
+      top: top,
+      width: elementWidth,
+      height: elementHeight,
+      child: element.type == ElementType.image
+          ? _buildImageElement(element)
+          : _buildTextElement(element),
+    );
+  }
+  
+  Widget _buildImageElement(CardElement element) {
+    final imagePath = element.data as String?;
+    
+    if (imagePath == null || imagePath.isEmpty) {
+      return Container(
+        color: Colors.grey[100],
+        child: Center(
+          child: Icon(
+            Icons.add_photo_alternate,
+            color: Colors.grey[400],
+            size: 24,
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Abbrechen'),
+      );
+    }
+    
+    return Image.file(
+      File(imagePath),
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          color: Colors.grey[100],
+          child: const Center(
+            child: Icon(Icons.broken_image, color: Colors.grey),
           ),
-          ElevatedButton(
-            onPressed: () {
-              provider.updateCardText(index, textController.text);
-              Navigator.pop(context);
-            },
-            child: const Text('Speichern'),
-          ),
-        ],
+        );
+      },
+    );
+  }
+  
+  Widget _buildTextElement(CardElement element) {
+    final text = element.data as String? ?? '';
+    
+    return Container(
+      padding: const EdgeInsets.all(4),
+      alignment: Alignment.center,
+      child: Text(
+        text.isEmpty ? 'Text hier...' : text,
+        style: element.textStyle?.copyWith(
+          fontSize: (element.textStyle?.fontSize ?? 16) * 0.625, // Scale down for preview
+          color: text.isEmpty ? Colors.grey : element.textStyle?.color,
+        ) ?? TextStyle(
+          fontSize: 10,
+          color: text.isEmpty ? Colors.grey : Colors.black,
+        ),
+        textAlign: element.textAlign ?? TextAlign.center,
+        maxLines: 3,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }

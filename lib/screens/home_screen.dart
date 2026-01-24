@@ -3,7 +3,8 @@ import 'package:provider/provider.dart';
 import '../providers/project_provider.dart';
 import '../widgets/config_panel.dart';
 import '../widgets/preview_canvas.dart';
-import '../widgets/text_mode_panel.dart';
+import '../widgets/table_import_panel.dart';
+import '../widgets/card_layout_editor.dart';
 import '../services/pdf_service.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -24,32 +25,32 @@ class HomeScreen extends StatelessWidget {
       ),
       body: Row(
         children: [
-          // Left sidebar - Configuration
+          // Left sidebar - Configuration & Table Import
           SizedBox(
             width: 300,
             child: Column(
-              children: [
-                Expanded(
+              children: const [
+                SizedBox(
+                  height: 200,
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        ConfigPanel(),
-                        SizedBox(height: 24),
-                        TextModePanel(),
-                      ],
-                    ),
+                    padding: EdgeInsets.all(16),
+                    child: ConfigPanel(),
                   ),
+                ),
+                Divider(height: 1),
+                Expanded(
+                  child: TableImportPanel(),
                 ),
               ],
             ),
           ),
           const VerticalDivider(width: 1),
-          // Main canvas - Preview
+          // Main canvas - Preview (Center)
           const Expanded(
             child: PreviewCanvas(),
           ),
+          // Right sidebar - Layout Editor
+          const CardLayoutEditor(),
         ],
       ),
     );

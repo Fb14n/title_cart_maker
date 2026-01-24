@@ -12,27 +12,53 @@ class PreviewCanvas extends StatelessWidget {
     return Consumer<ProjectProvider>(
       builder: (context, provider, child) {
         final config = provider.layoutConfig;
+        final cardsPerPage = config.totalCards;
+        final totalCards = provider.cards.length;
+        final numberOfPages = (totalCards / cardsPerPage).ceil().clamp(1, 100);
         
         return Container(
           color: Colors.grey[200],
-          child: Center(
+          child: SingleChildScrollView(
             child: SingleChildScrollView(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Container(
-                  margin: const EdgeInsets.all(32),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: _buildA4Preview(context, provider),
+              scrollDirection: Axis.horizontal,
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  children: List.generate(numberOfPages, (pageIndex) {
+                    final startIndex = pageIndex * cardsPerPage;
+                    final endIndex = (startIndex + cardsPerPage).clamp(0, totalCards);
+                    final cardsOnPage = provider.cards.sublist(startIndex, endIndex);
+                    
+                    return Column(
+                      children: [
+                        if (pageIndex > 0) const SizedBox(height: 32),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: _buildA4Preview(context, provider, cardsOnPage, startIndex),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            'Seite ${pageIndex + 1} von $numberOfPages',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }),
                 ),
               ),
             ),
@@ -42,7 +68,7 @@ class PreviewCanvas extends StatelessWidget {
     );
   }
 
-  Widget _buildA4Preview(BuildContext context, ProjectProvider provider) {
+  Widget _buildA4Preview(BuildContext context, ProjectProvider provider, List<dynamic> cardsOnPage, int startIndex) {
     final config = provider.layoutConfig;
     
     // A4 dimensions at 2x scale for better visibility
@@ -81,11 +107,11 @@ class PreviewCanvas extends StatelessWidget {
                 crossAxisSpacing: config.horizontalSpacing * mmToPixel,
                 mainAxisSpacing: config.verticalSpacing * mmToPixel,
               ),
-              itemCount: provider.cards.length,
+              itemCount: cardsOnPage.length,
               itemBuilder: (context, index) {
                 return CardPreview(
-                  index: index,
-                  cardData: provider.cards[index],
+                  index: startIndex + index,
+                  cardData: cardsOnPage[index],
                   width: config.cardWidth * mmToPixel,
                   height: config.cardHeight * mmToPixel,
                 );
