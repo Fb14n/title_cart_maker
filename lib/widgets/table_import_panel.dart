@@ -293,7 +293,28 @@ class _TableImportPanelState extends State<TableImportPanel> {
     }
   }
 
+  // Returns the selected column data as a list of strings.
+  // If multiple columns are selected, their values are concatenated per row with ' | ' as separator.
   List<String> getSelectedColumnData() {
-    return _selectedColumn;
+    if (_selectedColumns.isEmpty) return [];
+
+    // If exactly one column selected, return it directly
+    if (_selectedColumns.length == 1) {
+      return _selectedColumns.first;
+    }
+
+    // Multiple columns: combine values row-wise
+    final maxRows = _selectedColumns.map((col) => col.length).reduce((a, b) => a > b ? a : b);
+    final combined = <String>[];
+
+    for (int row = 0; row < maxRows; row++) {
+      final parts = <String>[];
+      for (final col in _selectedColumns) {
+        parts.add(row < col.length ? col[row] : '');
+      }
+      combined.add(parts.join(' | '));
+    }
+
+    return combined;
   }
 }

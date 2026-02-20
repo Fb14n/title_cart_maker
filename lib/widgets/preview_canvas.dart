@@ -18,9 +18,8 @@ class PreviewCanvas extends StatelessWidget {
         
         return Container(
           color: Colors.grey[200],
-          child: SingleChildScrollView(
+          child: Center(
             child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
               child: Padding(
                 padding: const EdgeInsets.all(32),
                 child: Column(

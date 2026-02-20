@@ -27,8 +27,8 @@ class ConfigPanel extends StatelessWidget {
               label: 'Spalten',
               value: config.columns.toDouble(),
               min: 1,
-              max: 5,
-              divisions: 4,
+              max: 20,
+              divisions: 19,
               onChanged: (value) {
                 provider.updateLayoutConfig(
                   config.copyWith(columns: value.toInt()),
@@ -42,8 +42,8 @@ class ConfigPanel extends StatelessWidget {
               label: 'Reihen',
               value: config.rows.toDouble(),
               min: 1,
-              max: 6,
-              divisions: 5,
+              max: 20,
+              divisions: 19,
               onChanged: (value) {
                 provider.updateLayoutConfig(
                   config.copyWith(rows: value.toInt()),

@@ -81,38 +81,71 @@ class CardPreview extends StatelessWidget {
       );
     }
     
-    return Image.file(
-      File(imagePath),
-      fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) {
-        return Container(
-          color: Colors.grey[100],
-          child: const Center(
-            child: Icon(Icons.broken_image, color: Colors.grey),
-          ),
-        );
-      },
+    return ClipRect(
+      child: Image.file(
+        File(imagePath),
+        fit: element.imageFit ?? BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: Colors.grey[100],
+            child: const Center(
+              child: Icon(Icons.broken_image, color: Colors.grey),
+            ),
+          );
+        },
+      ),
     );
   }
   
   Widget _buildTextElement(CardElement element) {
     final text = element.data as String? ?? '';
+    final displayText = text.isEmpty && element.placeholder != null 
+        ? '[${element.placeholder}]' 
+        : (text.isEmpty ? 'Text hier...' : text);
+    final isPlaceholder = text.isEmpty && element.placeholder != null;
+    
+    // Map TextAlign to Container Alignment
+    Alignment containerAlignment;
+    final textAlign = element.textAlign ?? TextAlign.center;
+    switch (textAlign) {
+      case TextAlign.left:
+      case TextAlign.start:
+        containerAlignment = Alignment.centerLeft;
+        break;
+      case TextAlign.right:
+      case TextAlign.end:
+        containerAlignment = Alignment.centerRight;
+        break;
+      case TextAlign.center:
+        containerAlignment = Alignment.center;
+        break;
+      case TextAlign.justify:
+        containerAlignment = Alignment.centerLeft;
+        break;
+    }
     
     return Container(
-      padding: const EdgeInsets.all(4),
-      alignment: Alignment.center,
+      padding: const EdgeInsets.only(left: 4, top: 4, right: 6, bottom: 4),
+      alignment: containerAlignment,
+      decoration: isPlaceholder ? BoxDecoration(
+        border: Border.all(color: Colors.blue.withOpacity(0.3), width: 1),
+        color: Colors.blue.withOpacity(0.05),
+      ) : null,
       child: Text(
-        text.isEmpty ? 'Text hier...' : text,
+        displayText,
         style: element.textStyle?.copyWith(
           fontSize: (element.textStyle?.fontSize ?? 16) * 0.625, // Scale down for preview
-          color: text.isEmpty ? Colors.grey : element.textStyle?.color,
+          color: isPlaceholder 
+              ? Colors.blue 
+              : (text.isEmpty ? Colors.grey : element.textStyle?.color),
+          fontStyle: isPlaceholder ? FontStyle.italic : element.textStyle?.fontStyle,
         ) ?? TextStyle(
           fontSize: 10,
-          color: text.isEmpty ? Colors.grey : Colors.black,
+          color: isPlaceholder ? Colors.blue : (text.isEmpty ? Colors.grey : Colors.black),
+          fontStyle: isPlaceholder ? FontStyle.italic : null,
         ),
-        textAlign: element.textAlign ?? TextAlign.center,
-        maxLines: 3,
-        overflow: TextOverflow.ellipsis,
+        textAlign: textAlign,
+        softWrap: true,
       ),
     );
   }

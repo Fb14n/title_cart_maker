@@ -47,4 +47,22 @@ class CardData {
       );
     }
   }
+  
+  Map<String, dynamic> toJson() {
+    return {
+      'imagePath': imagePath,
+      'text': text,
+      'layout': layout?.toJson(),
+    };
+  }
+  
+  factory CardData.fromJson(Map<String, dynamic> json) {
+    return CardData(
+      imagePath: json['imagePath'],
+      text: json['text'] ?? '',
+      layout: json['layout'] != null 
+          ? CardLayout.fromJson(json['layout'])
+          : null,
+    );
+  }
 }

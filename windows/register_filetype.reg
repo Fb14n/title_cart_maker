@@ -1,0 +1,15 @@
+Windows Registry Editor Version 5.00
+
+; Title Card Maker File Association (.tcmaker)
+
+[HKEY_CURRENT_USER\Software\Classes\.tcmaker]
+@="TitleCardMaker.Project"
+
+[HKEY_CURRENT_USER\Software\Classes\TitleCardMaker.Project]
+@="Title Card Maker Project"
+
+[HKEY_CURRENT_USER\Software\Classes\TitleCardMaker.Project\DefaultIcon]
+@="%SystemRoot%\\System32\\SHELL32.dll,1"
+
+[HKEY_CURRENT_USER\Software\Classes\TitleCardMaker.Project\shell\open\command]
+@="\"C:\\Program Files\\TitleCardMaker\\title_card_maker.exe\" \"%1\""

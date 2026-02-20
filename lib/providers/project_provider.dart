@@ -1,10 +1,16 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'dart:io';
+import 'dart:convert';
 import '../models/card_data.dart';
 import '../models/layout_config.dart';
 import '../models/text_mode.dart';
 import '../models/layout_mode.dart';
 import '../models/card_layout.dart';
 import '../models/element_type.dart';
+import '../models/card_element.dart';
+import '../models/project_data.dart';
+import '../models/save_options.dart';
 
 class ProjectProvider extends ChangeNotifier {
   LayoutConfig _layoutConfig = LayoutConfig();
@@ -229,33 +235,75 @@ class ProjectProvider extends ChangeNotifier {
     final numColumns = _tableData.length;
     final numRows = _tableData.first.length;
     
+    // Calculate how many cards we need and add pages if necessary
+    final cardsPerPage = _layoutConfig.totalCards;
+    final pagesNeeded = (numRows / cardsPerPage).ceil();
+    final currentPages = (_cards.length / cardsPerPage).ceil();
+    
+    // Get the global layout template BEFORE adding new cards
+    final templateLayout = _layoutMode == LayoutMode.global && _globalLayout != null
+        ? _globalLayout!
+        : (_cards.isNotEmpty ? _cards[0].getEffectiveLayout() : CardLayout());
+    
+    // Add more pages if needed - initialize with template layout
+    if (pagesNeeded > currentPages) {
+      final additionalCards = (pagesNeeded * cardsPerPage) - _cards.length;
+      for (int i = 0; i < additionalCards; i++) {
+        // Create new card with template layout
+        _cards.add(CardData(layout: templateLayout));
+      }
+    }
+    
+    // Find all text elements with placeholders
+    final placeholderElements = templateLayout.elements
+        .where((e) => e.type == ElementType.text && e.placeholder != null)
+        .toList();
+    
+    // Apply to each card
     for (int cardIndex = 0; cardIndex < _cards.length && cardIndex < numRows; cardIndex++) {
-      final layout = _cards[cardIndex].getEffectiveLayout();
+      // Always start from template layout to ensure consistency
+      final layout = templateLayout;
       final updatedElements = <CardElement>[];
       
-      // Keep non-text elements (images, etc)
+      // Keep non-text elements and text elements without placeholders from template
       updatedElements.addAll(
-        layout.elements.where((e) => e.type != ElementType.text)
+        layout.elements.where((e) => 
+          e.type != ElementType.text || e.placeholder == null)
       );
       
-      // Add text elements for each selected column
+      // Update or create elements based on placeholders
       for (int colIndex = 0; colIndex < numColumns; colIndex++) {
         final text = cardIndex < _tableData[colIndex].length 
             ? _tableData[colIndex][cardIndex] 
             : '';
         
-        // Calculate position based on column index
-        final yOffset = 0.1 + (colIndex * 0.25);
+        // Find if there's already a placeholder element for this column
+        CardElement? existingElement;
+        for (var elem in placeholderElements) {
+          // Check if placeholder matches column index (e.g., "Spalte 1" or just contains the number)
+          final placeholder = elem.placeholder!.toLowerCase();
+          if (placeholder.contains('spalte ${colIndex + 1}') || 
+              placeholder == 'spalte ${colIndex + 1}' ||
+              placeholder == '${colIndex + 1}') {
+            existingElement = elem;
+            break;
+          }
+        }
         
-        updatedElements.add(CardElement(
-          id: 'tbl_txt_${DateTime.now().millisecondsSinceEpoch}_$colIndex',
-          type: ElementType.text,
-          position: Offset(0.1, yOffset.clamp(0.0, 0.7)),
-          size: const Size(0.8, 0.2),
-          data: text,
-          textStyle: const TextStyle(fontSize: 16, color: Colors.black),
-          textAlign: TextAlign.center,
-        ));
+        if (existingElement != null) {
+          // Use existing positioned element
+          updatedElements.add(existingElement.copyWith(
+            data: text,
+            id: 'tbl_${existingElement.id}_$cardIndex',
+          ));
+        } else if (colIndex < placeholderElements.length) {
+          // Use placeholder by index
+          final placeholderElem = placeholderElements[colIndex];
+          updatedElements.add(placeholderElem.copyWith(
+            data: text,
+            id: 'tbl_${placeholderElem.id}_$cardIndex',
+          ));
+        }
       }
       
       final newLayout = layout.copyWith(elements: updatedElements);
@@ -276,5 +324,104 @@ class ProjectProvider extends ChangeNotifier {
       ),
     );
     notifyListeners();
+  }
+  
+  // Save and Load functionality
+  Future<void> saveProject(String filePath, SaveOptions options) async {
+    try {
+      final projectData = ProjectData(
+        version: '1.0',
+        layoutConfig: options.saveLayout ? _layoutConfig : null,
+        cards: options.saveCardContent ? _cards : null,
+        textMode: options.saveGlobalSettings ? _textMode : null,
+        layoutMode: options.saveGlobalSettings ? _layoutMode : null,
+        globalText: options.saveGlobalSettings ? _globalText : null,
+        globalImagePath: options.saveGlobalSettings ? _globalImagePath : null,
+        globalLayout: options.saveGlobalSettings ? _globalLayout : null,
+        tableData: options.saveTableData ? _tableData : null,
+        embeddedImagePaths: options.saveImages ? await _collectImagePaths() : null,
+      );
+      
+      final jsonString = projectData.toJsonString();
+      final file = File(filePath);
+      await file.writeAsString(jsonString, flush: true);
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error saving project: $e');
+      }
+      rethrow;
+    }
+  }
+  
+  Future<void> loadProject(String filePath) async {
+    try {
+      final file = File(filePath);
+      final jsonString = await file.readAsString();
+      final projectData = ProjectData.fromJsonString(jsonString);
+      
+      // Apply loaded data
+      if (projectData.layoutConfig != null) {
+        updateLayoutConfig(projectData.layoutConfig!);
+      }
+      
+      if (projectData.cards != null) {
+        _cards = projectData.cards!;
+      }
+      
+      if (projectData.textMode != null) {
+        _textMode = projectData.textMode!;
+      }
+      
+      if (projectData.layoutMode != null) {
+        _layoutMode = projectData.layoutMode!;
+      }
+      
+      if (projectData.globalText != null) {
+        _globalText = projectData.globalText!;
+      }
+      
+      if (projectData.globalImagePath != null) {
+        _globalImagePath = projectData.globalImagePath;
+      }
+      
+      if (projectData.globalLayout != null) {
+        _globalLayout = projectData.globalLayout;
+      }
+      
+      if (projectData.tableData != null) {
+        _tableData = projectData.tableData!;
+      }
+      
+      notifyListeners();
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error loading project: $e');
+      }
+      rethrow;
+    }
+  }
+  
+  Future<List<String>> _collectImagePaths() async {
+    final imagePaths = <String>[];
+    
+    // Collect from global
+    if (_globalImagePath != null && _globalImagePath!.isNotEmpty) {
+      imagePaths.add(_globalImagePath!);
+    }
+    
+    // Collect from cards
+    for (final card in _cards) {
+      final layout = card.getEffectiveLayout();
+      for (final element in layout.elements) {
+        if (element.type == ElementType.image && element.data is String) {
+          final path = element.data as String;
+          if (path.isNotEmpty && !imagePaths.contains(path)) {
+            imagePaths.add(path);
+          }
+        }
+      }
+    }
+    
+    return imagePaths;
   }
 }
