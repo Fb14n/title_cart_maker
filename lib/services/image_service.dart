@@ -249,13 +249,19 @@ class ImageService {
   
   static Future<ui.Image> _widgetToImage(Widget widget, double width, double height) async {
     final RenderRepaintBoundary repaintBoundary = RenderRepaintBoundary();
-    
+
+    // Versionssichere Offscreen-Render-Pipeline:
+    // Statt ViewConfiguration manuell zu bauen (API driftet zwischen Flutter-Versionen),
+    // verwenden wir die Configuration des aktuellen FlutterView und steuern die Zielgr f6 dfe  fcber pixelRatio.
+    final ui.FlutterView flutterView = ui.PlatformDispatcher.instance.views.first;
+
     final RenderView renderView = RenderView(
-      view: ui.PlatformDispatcher.instance.views.first,
-      child: RenderPositionedBox(child: repaintBoundary),
-      configuration: ViewConfiguration(
-        size: Size(width, height),
-        devicePixelRatio: 1.0,
+      view: flutterView,
+      configuration: const ViewConfiguration(devicePixelRatio: 1.0),
+      child: RenderPositionedBox(
+        alignment: Alignment.center,
+        // Das Boundary lebt im RenderTree und wird danach mit einem Widget-Tree befüllt.
+        child: repaintBoundary,
       ),
     );
 
@@ -265,14 +271,17 @@ class ImageService {
     pipelineOwner.rootNode = renderView;
     renderView.prepareInitialFrame();
 
-    final RenderObjectToWidgetElement<RenderBox> rootElement =
-        RenderObjectToWidgetAdapter<RenderBox>(
+    final RenderObjectToWidgetElement<RenderBox> rootElement = RenderObjectToWidgetAdapter<RenderBox>(
       container: repaintBoundary,
       child: Directionality(
         textDirection: TextDirection.ltr,
         child: MediaQuery(
           data: const MediaQueryData(),
-          child: widget,
+          child: SizedBox(
+            width: width,
+            height: height,
+            child: widget,
+          ),
         ),
       ),
     ).attachToRenderTree(buildOwner);
@@ -284,7 +293,14 @@ class ImageService {
     pipelineOwner.flushCompositingBits();
     pipelineOwner.flushPaint();
 
-    final ui.Image image = await repaintBoundary.toImage(pixelRatio: 1.0);
+    // Skaliere das Ergebnis so, dass wir ungef e4r auf die gew fcnschte Pixelgr f6 dfe kommen.
+    final double viewLogicalWidth = flutterView.physicalSize.width / flutterView.devicePixelRatio;
+    final double viewLogicalHeight = flutterView.physicalSize.height / flutterView.devicePixelRatio;
+    final double ratioX = viewLogicalWidth > 0 ? (width / viewLogicalWidth) : 1.0;
+    final double ratioY = viewLogicalHeight > 0 ? (height / viewLogicalHeight) : 1.0;
+    final double pixelRatio = (ratioX < ratioY ? ratioX : ratioY).clamp(0.01, 10.0);
+
+    final ui.Image image = await repaintBoundary.toImage(pixelRatio: pixelRatio);
     return image;
   }
 }
