@@ -47,7 +47,9 @@ jobs:
 
       - name: Read version from pubspec
         id: read_version
-        run: echo "VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d '[:space:]')" >> $GITHUB_OUTPUT
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d '[:space:]')
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Download build artifact
         uses: actions/download-artifact@v4
@@ -57,7 +59,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.read_version.outputs.VERSION }}-${{ github.run_number }}
-          name: Release v${{ steps.read_version.outputs.VERSION }} (Build ${{ github.run_number }})
+          tag_name: "v${{ steps.read_version.outputs.VERSION }}-${{ github.run_number }}"
+          name: "Release v${{ steps.read_version.outputs.VERSION }} (Build ${{ github.run_number }})"
           files: title_card_maker-windows.zip
           generate_release_notes: true
