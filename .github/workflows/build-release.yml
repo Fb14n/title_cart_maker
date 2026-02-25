@@ -17,7 +17,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.32.x'
+          flutter-version: '3.41.2'
           channel: 'stable'
           cache: true
 
@@ -62,4 +62,4 @@ jobs:
           tag_name: "v${{ steps.read_version.outputs.VERSION }}-${{ github.run_number }}"
           name: "Release v${{ steps.read_version.outputs.VERSION }} (Build ${{ github.run_number }})"
           files: title_card_maker-windows.zip
-          generate_release_notes: true
+          generate_release_notes: trueRun flutter pub get
