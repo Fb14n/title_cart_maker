@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
-import '../providers/project_provider.dart';
-import '../models/card_layout.dart';
-import '../models/card_element.dart';
-import '../models/element_type.dart';
-import '../models/layout_mode.dart';
+import 'package:title_card_maker/providers/project_provider.dart';
+import 'package:title_card_maker/models/card_layout.dart';
+import 'package:title_card_maker/models/card_element.dart';
+import 'package:title_card_maker/models/element_type.dart';
+import 'package:title_card_maker/models/layout_mode.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 

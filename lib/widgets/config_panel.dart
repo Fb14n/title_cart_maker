@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/project_provider.dart';
-import '../models/layout_config.dart';
+import 'package:title_card_maker/providers/project_provider.dart';
+import 'package:title_card_maker/models/layout_config.dart';
 
 class ConfigPanel extends StatelessWidget {
   const ConfigPanel({super.key});

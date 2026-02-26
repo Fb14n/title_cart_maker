@@ -3,11 +3,11 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:file_picker/file_picker.dart';
-import '../models/card_data.dart';
-import '../models/layout_config.dart';
-import '../models/card_element.dart';
-import '../models/element_type.dart';
-import '../models/image_export_options.dart';
+import 'package:title_card_maker/models/card_data.dart';
+import 'package:title_card_maker/models/layout_config.dart';
+import 'package:title_card_maker/models/card_element.dart';
+import 'package:title_card_maker/models/element_type.dart';
+import 'package:title_card_maker/models/image_export_options.dart';
 
 class ImageService {
   static Future<void> generateAndSaveImages({
