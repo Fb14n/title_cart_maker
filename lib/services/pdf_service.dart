@@ -12,6 +12,7 @@ class PdfService {
   static Future<void> generateAndSavePdf({
     required List<CardData> cards,
     required LayoutConfig layoutConfig,
+    required Set<int> selectedIndices,
   }) async {
     final pdf = pw.Document();
 
@@ -46,11 +47,14 @@ class PdfService {
               childAspectRatio: layoutConfig.cardWidth / layoutConfig.cardHeight,
               crossAxisSpacing: layoutConfig.horizontalSpacing * mmToPoints,
               mainAxisSpacing: layoutConfig.verticalSpacing * mmToPoints,
-              children: cardsOnPage.map((processedCard) {
+              children: cardsOnPage.asMap().entries.map((entry) {
+                final globalIndex = startIndex + entry.key;
+                final isSelected = selectedIndices.contains(globalIndex);
                 return _buildPdfCard(
-                  processedCard: processedCard,
+                  processedCard: entry.value,
                   width: layoutConfig.cardWidth * mmToPoints,
                   height: layoutConfig.cardHeight * mmToPoints,
+                  isSelected: isSelected,
                 );
               }).toList(),
             );
@@ -117,7 +121,11 @@ class PdfService {
     required _ProcessedCard processedCard,
     required double width,
     required double height,
+    bool isSelected = true,
   }) {
+    if (!isSelected) {
+      return pw.Container(width: width, height: height);
+    }
     return pw.Container(
       width: width,
       height: height,

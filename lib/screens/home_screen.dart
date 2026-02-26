@@ -206,21 +206,19 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
     
-    if (selectedIndices == null || selectedIndices.isEmpty) return; // User cancelled or no cards selected
-    
-    // Get only selected cards
-    final selectedCards = selectedIndices.map((index) => provider.cards[index]).toList();
+    if (selectedIndices == null) return; // User cancelled
     
     try {
       await PdfService.generateAndSavePdf(
-        cards: selectedCards,
+        cards: provider.cards,
         layoutConfig: provider.layoutConfig,
+        selectedIndices: selectedIndices.toSet(),
       );
       
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('PDF mit ${selectedCards.length} Karten erfolgreich exportiert!'),
+            content: Text('PDF mit ${selectedIndices.length} Karten erfolgreich exportiert!'),
             backgroundColor: Colors.green,
           ),
         );
