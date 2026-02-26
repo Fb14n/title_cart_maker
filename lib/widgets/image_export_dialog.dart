@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/image_export_options.dart';
+import 'package:title_card_maker/models/image_export_options.dart';
 
 class ImageExportDialog extends StatefulWidget {
   const ImageExportDialog({super.key});

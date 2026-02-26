@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
-import '../providers/project_provider.dart';
-import '../models/text_mode.dart';
-import '../services/import_service.dart';
+import 'package:title_card_maker/providers/project_provider.dart';
+import 'package:title_card_maker/models/text_mode.dart';
+import 'package:title_card_maker/services/import_service.dart';
 
 class TextModePanel extends StatelessWidget {
   const TextModePanel({super.key});

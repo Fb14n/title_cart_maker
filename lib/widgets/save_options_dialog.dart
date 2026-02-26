@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/save_options.dart';
+import 'package:title_card_maker/models/save_options.dart';
 
 class SaveOptionsDialog extends StatefulWidget {
   const SaveOptionsDialog({super.key});

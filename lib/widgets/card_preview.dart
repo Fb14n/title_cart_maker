@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
-import '../providers/project_provider.dart';
-import '../models/card_data.dart';
-import '../models/text_mode.dart';
-import '../models/card_element.dart';
-import '../models/element_type.dart';
+import 'package:title_card_maker/providers/project_provider.dart';
+import 'package:title_card_maker/models/card_data.dart';
+import 'package:title_card_maker/models/text_mode.dart';
+import 'package:title_card_maker/models/card_element.dart';
+import 'package:title_card_maker/models/element_type.dart';
 
 class CardPreview extends StatelessWidget {
   final int index;
