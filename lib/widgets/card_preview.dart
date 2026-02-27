@@ -13,6 +13,7 @@ class CardPreview extends StatelessWidget {
   final CardData cardData;
   final double width;
   final double height;
+  final VoidCallback? onDoubleTap;
 
   const CardPreview({
     super.key,
@@ -20,6 +21,7 @@ class CardPreview extends StatelessWidget {
     required this.cardData,
     required this.width,
     required this.height,
+    this.onDoubleTap,
   });
 
   @override
@@ -29,9 +31,9 @@ class CardPreview extends StatelessWidget {
     
     return GestureDetector(
       onTap: () {
-        // Select card for editing in right panel
         provider.setSelectedCardIndex(index);
       },
+      onDoubleTap: onDoubleTap,
       child: Container(
         width: width,
         height: height,

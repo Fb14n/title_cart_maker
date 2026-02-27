@@ -12,7 +12,8 @@ import 'package:file_picker/file_picker.dart';
 import 'card_preview.dart';
 
 class CardLayoutEditor extends StatefulWidget {
-  const CardLayoutEditor({super.key});
+  final bool inDialog;
+  const CardLayoutEditor({super.key, this.inDialog = false});
 
   @override
   State<CardLayoutEditor> createState() => _CardLayoutEditorState();
@@ -111,48 +112,55 @@ class _CardLayoutEditorState extends State<CardLayoutEditor> {
     return Consumer<ProjectProvider>(
       builder: (context, provider, child) {
         final layout = provider.getCurrentEditingLayout();
-        
-        return KeyboardListener(
+        final inDialog = widget.inDialog;
+
+        final content = KeyboardListener(
           focusNode: _focusNode,
           autofocus: true,
           onKeyEvent: (event) => _handleKeyEvent(event, provider),
-          child: Container(
-            width: 400,
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              border: const Border(
-                left: BorderSide(color: Colors.grey, width: 1),
-              ),
-            ),
-            child: Column(
-              children: [
-                _buildHeader(provider),
-                const Divider(height: 1),
+          child: Column(
+            children: [
+              _buildHeader(provider),
+              const Divider(height: 1),
+              if (!inDialog) ...[
                 _buildZoomAndGridControls(),
                 const Divider(height: 1),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _buildCardPreview(layout, provider),
-                        const SizedBox(height: 16),
-                        if (_selectedElementId != null)
-                          _buildElementPropertiesPanel(layout, provider),
-                        const SizedBox(height: 16),
-                        _buildToolbar(provider),
-                        const SizedBox(height: 16),
-                        _buildBackgroundColorPicker(layout, provider),
-                        const SizedBox(height: 16),
-                        _buildTableDataSection(provider),
-                      ],
-                    ),
+              ],
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildCardPreview(layout, provider),
+                      const SizedBox(height: 16),
+                      if (_selectedElementId != null)
+                        _buildElementPropertiesPanel(layout, provider),
+                      const SizedBox(height: 16),
+                      _buildToolbar(provider),
+                      const SizedBox(height: 16),
+                      _buildBackgroundColorPicker(layout, provider),
+                      const SizedBox(height: 16),
+                      _buildTableDataSection(provider),
+                    ],
                   ),
                 ),
-              ],
+              ),
+            ],
+          ),
+        );
+
+        if (inDialog) return content;
+
+        return Container(
+          width: 400,
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            border: const Border(
+              left: BorderSide(color: Colors.grey, width: 1),
             ),
           ),
+          child: content,
         );
       },
     );
@@ -413,6 +421,34 @@ class _CardLayoutEditorState extends State<CardLayoutEditor> {
   }
 
   Widget _buildHeader(ProjectProvider provider) {
+    // In individual edit mode (opened via dialog), show a simplified banner instead
+    if (provider.isIndividualEditMode) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        color: Theme.of(context).colorScheme.secondaryContainer,
+        child: Row(
+          children: [
+            Icon(Icons.edit_note, size: 18,
+                color: Theme.of(context).colorScheme.onSecondaryContainer),
+            const SizedBox(width: 8),
+            Text(
+              'Karte ${provider.individualEditIndex! + 1} – Individuell',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSecondaryContainer,
+              ),
+            ),
+            const Spacer(),
+            Tooltip(
+              message: 'Globale Änderungen überschreiben diese Einstellungen.',
+              child: Icon(Icons.warning_amber_rounded, size: 16,
+                  color: Theme.of(context).colorScheme.onSecondaryContainer),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       child: Column(

@@ -23,6 +23,9 @@ class ProjectProvider extends ChangeNotifier {
   LayoutMode _layoutMode = LayoutMode.individual;
   CardLayout? _globalLayout;
   int _selectedCardIndex = 0; // Currently selected card in editor
+
+  // Individual card override editing (set via double-click in preview)
+  int? _individualEditIndex;
   
   // Table data for text generation
   List<List<String>> _tableData = []; // Changed to support multiple columns
@@ -38,6 +41,8 @@ class ProjectProvider extends ChangeNotifier {
   CardLayout? get globalLayout => _globalLayout;
   int get selectedCardIndex => _selectedCardIndex;
   List<List<String>> get tableData => _tableData;
+  int? get individualEditIndex => _individualEditIndex;
+  bool get isIndividualEditMode => _individualEditIndex != null;
 
   ProjectProvider() {
     _initializeCards();
@@ -209,6 +214,9 @@ class ProjectProvider extends ChangeNotifier {
   }
   
   CardLayout getCurrentEditingLayout() {
+    if (_individualEditIndex != null) {
+      return _cards[_individualEditIndex!].getEffectiveLayout();
+    }
     if (_layoutMode == LayoutMode.global) {
       return _globalLayout ?? CardLayout();
     } else {
@@ -217,11 +225,27 @@ class ProjectProvider extends ChangeNotifier {
   }
   
   void updateCurrentEditingLayout(CardLayout layout) {
+    if (_individualEditIndex != null) {
+      updateCardLayout(_individualEditIndex!, layout);
+      return;
+    }
     if (_layoutMode == LayoutMode.global) {
       setGlobalLayout(layout);
     } else {
       updateCardLayout(_selectedCardIndex, layout);
     }
+  }
+
+  void startIndividualEdit(int index) {
+    if (index >= 0 && index < _cards.length) {
+      _individualEditIndex = index;
+      notifyListeners();
+    }
+  }
+
+  void stopIndividualEdit() {
+    _individualEditIndex = null;
+    notifyListeners();
   }
   
   void setTableData(List<List<String>> data) {
