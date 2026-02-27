@@ -9,6 +9,7 @@ import '../models/element_type.dart';
 import '../models/layout_mode.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
+import 'card_preview.dart';
 
 class CardLayoutEditor extends StatefulWidget {
   const CardLayoutEditor({super.key});
@@ -799,12 +800,13 @@ class _CardLayoutEditorState extends State<CardLayoutEditor> {
           : (text.isEmpty ? 'Text hier...' : text);
       final isPlaceholder = text.isEmpty && element.placeholder != null;
       
-      // Map TextAlign to Container Alignment
-      Alignment containerAlignment;
+      // Map TextAlign to Container Alignment (horizontal only)
       final textAlign = element.textAlign ?? TextAlign.center;
+      Alignment containerAlignment;
       switch (textAlign) {
         case TextAlign.left:
         case TextAlign.start:
+        case TextAlign.justify:
           containerAlignment = Alignment.centerLeft;
           break;
         case TextAlign.right:
@@ -812,13 +814,15 @@ class _CardLayoutEditorState extends State<CardLayoutEditor> {
           containerAlignment = Alignment.centerRight;
           break;
         case TextAlign.center:
+        default:
           containerAlignment = Alignment.center;
-          break;
-        case TextAlign.justify:
-          containerAlignment = Alignment.centerLeft;
-          break;
       }
-      
+
+      final textStyle = (element.textStyle ?? const TextStyle(fontSize: 16)).copyWith(
+        color: isPlaceholder ? Colors.blue : element.textStyle?.color,
+        fontStyle: isPlaceholder ? FontStyle.italic : element.textStyle?.fontStyle,
+      );
+
       return Container(
         padding: const EdgeInsets.only(left: 4, top: 4, right: 6, bottom: 4),
         alignment: containerAlignment,
@@ -826,15 +830,12 @@ class _CardLayoutEditorState extends State<CardLayoutEditor> {
           color: Colors.blue.withOpacity(0.1),
           border: Border.all(color: Colors.blue.withOpacity(0.5), width: 1),
         ) : null,
-        child: Text(
-          displayText,
-          style: (element.textStyle ?? const TextStyle(fontSize: 16)).copyWith(
-            color: isPlaceholder ? Colors.blue : element.textStyle?.color,
-            fontStyle: isPlaceholder ? FontStyle.italic : element.textStyle?.fontStyle,
-          ),
-          textAlign: textAlign,
-          softWrap: true,
-        ),
+        child: element.textVerticalAlign == 'bottom'
+            ? LayoutBuilder(builder: (context, constraints) {
+                final broken = CardPreview.breakBottomLonger(displayText, textStyle, constraints.maxWidth - 10);
+                return Text(broken, style: textStyle, textAlign: textAlign, softWrap: true);
+              })
+            : Text(displayText, style: textStyle, textAlign: textAlign, softWrap: true),
       );
     }
   }
@@ -1133,6 +1134,7 @@ class _CardLayoutEditorState extends State<CardLayoutEditor> {
     bool isItalic = element.textStyle?.fontStyle == FontStyle.italic;
     bool isUnderline = element.textStyle?.decoration == TextDecoration.underline;
     TextAlign textAlign = element.textAlign ?? TextAlign.center;
+    String textVerticalAlign = element.textVerticalAlign ?? 'center';
     String fontFamily = element.textStyle?.fontFamily ?? 'Arial';
     
     // Available fonts - mapped to PDF standard fonts
@@ -1261,6 +1263,27 @@ class _CardLayoutEditorState extends State<CardLayoutEditor> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
+                
+                // Line break distribution
+                const Text('Zeilenverteilung:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    ChoiceChip(
+                      label: const Text('Oben länger'),
+                      selected: textVerticalAlign != 'bottom',
+                      onSelected: (_) => setDialogState(() => textVerticalAlign = 'top'),
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: const Text('Unten länger'),
+                      selected: textVerticalAlign == 'bottom',
+                      onSelected: (_) => setDialogState(() => textVerticalAlign = 'bottom'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
                 const SizedBox(height: 16),
                 
                 // Font size slider
@@ -1416,6 +1439,7 @@ class _CardLayoutEditorState extends State<CardLayoutEditor> {
                         decoration: isUnderline ? TextDecoration.underline : TextDecoration.none,
                       ),
                       textAlign: textAlign,
+                      textVerticalAlign: textVerticalAlign,
                     );
                   }
                   return e;

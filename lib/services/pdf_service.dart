@@ -191,7 +191,7 @@ class PdfService {
     final text = element.data as String? ?? '';
     final textStyle = element.textStyle;
     
-    // Convert Flutter TextAlign to PDF TextAlign and Alignment
+    // Convert Flutter TextAlign to PDF TextAlign and Alignment (horizontal only)
     pw.TextAlign pdfTextAlign = pw.TextAlign.center;
     pw.Alignment containerAlignment = pw.Alignment.center;
     
@@ -277,13 +277,18 @@ class PdfService {
       }
     }
     
+    // Compute line break for bottom-longer mode
+    final displayText = element.textVerticalAlign == 'bottom'
+        ? _breakBottomLongerPdf(text, textStyle?.fontSize ?? 12, width - 10)
+        : text;
+
     return pw.Container(
       width: width,
       height: height,
       padding: const pw.EdgeInsets.only(left: 4, top: 4, right: 6, bottom: 4),
       alignment: containerAlignment,
       child: pw.Text(
-        text,
+        displayText,
         style: pw.TextStyle(
           font: pdfFont,
           fontSize: textStyle?.fontSize ?? 12,
@@ -299,6 +304,45 @@ class PdfService {
         softWrap: true,
       ),
     );
+  }
+
+  /// Computes a line break so the bottom line is wider than the top.
+  /// Uses Flutter's TextPainter with the given font size to measure word widths.
+  static String _breakBottomLongerPdf(String text, double fontSize, double maxWidth) {
+    if (text.contains('\n') || maxWidth <= 0) return text;
+    final words = text.trim().split(RegExp(r' +'));
+    if (words.length < 2) return text;
+
+    final style = TextStyle(fontSize: fontSize);
+    String? best;
+    double bestDiff = double.infinity;
+
+    for (int i = 1; i < words.length; i++) {
+      final top = words.sublist(0, i).join(' ');
+      final bottom = words.sublist(i).join(' ');
+
+      final tpBottom = TextPainter(
+        text: TextSpan(text: bottom, style: style),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+        ellipsis: '\u2026',
+      )..layout(maxWidth: maxWidth);
+
+      if (tpBottom.didExceedMaxLines) break;
+
+      final tpTop = TextPainter(
+        text: TextSpan(text: top, style: style),
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: maxWidth);
+
+      final diff = tpBottom.width - tpTop.width;
+      if (diff > 0 && diff < bestDiff) {
+        bestDiff = diff;
+        best = '$top\n$bottom';
+      }
+    }
+
+    return best ?? text;
   }
 }
 

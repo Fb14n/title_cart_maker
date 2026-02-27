@@ -11,6 +11,7 @@ class CardElement {
   final TextAlign? textAlign;
   final String? placeholder; // Label for table mapping (e.g., "Spalte 1", "Spalte 2")
   final BoxFit? imageFit; // How image should fit in its box (contain or cover)
+  final String? textVerticalAlign; // "top", "center", "bottom" – defaults to "center"
   
   CardElement({
     required this.id,
@@ -22,6 +23,7 @@ class CardElement {
     this.textAlign,
     this.placeholder,
     this.imageFit,
+    this.textVerticalAlign,
   });
   
   CardElement copyWith({
@@ -34,6 +36,8 @@ class CardElement {
     TextAlign? textAlign,
     String? placeholder,
     BoxFit? imageFit,
+    String? textVerticalAlign,
+    bool clearTextVerticalAlign = false,
   }) {
     return CardElement(
       id: id ?? this.id,
@@ -45,6 +49,7 @@ class CardElement {
       textAlign: textAlign ?? this.textAlign,
       placeholder: placeholder ?? this.placeholder,
       imageFit: imageFit ?? this.imageFit,
+      textVerticalAlign: clearTextVerticalAlign ? null : (textVerticalAlign ?? this.textVerticalAlign),
     );
   }
   
@@ -57,6 +62,7 @@ class CardElement {
       'data': data,
       'placeholder': placeholder,
       'imageFit': imageFit?.index,
+      'textVerticalAlign': textVerticalAlign,
       'textStyle': textStyle != null ? {
         'fontSize': textStyle!.fontSize,
         'fontFamily': textStyle!.fontFamily,
@@ -78,6 +84,7 @@ class CardElement {
       data: json['data'],
       placeholder: json['placeholder'],
       imageFit: json['imageFit'] != null ? BoxFit.values[json['imageFit']] : null,
+      textVerticalAlign: json['textVerticalAlign'] as String?,
       textStyle: json['textStyle'] != null ? TextStyle(
         fontSize: json['textStyle']['fontSize'],
         fontFamily: json['textStyle']['fontFamily'],

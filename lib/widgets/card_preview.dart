@@ -104,12 +104,13 @@ class CardPreview extends StatelessWidget {
         : (text.isEmpty ? 'Text hier...' : text);
     final isPlaceholder = text.isEmpty && element.placeholder != null;
     
-    // Map TextAlign to Container Alignment
-    Alignment containerAlignment;
+    // Map TextAlign to Container Alignment (horizontal only, vertical always centered)
     final textAlign = element.textAlign ?? TextAlign.center;
+    Alignment containerAlignment;
     switch (textAlign) {
       case TextAlign.left:
       case TextAlign.start:
+      case TextAlign.justify:
         containerAlignment = Alignment.centerLeft;
         break;
       case TextAlign.right:
@@ -117,13 +118,22 @@ class CardPreview extends StatelessWidget {
         containerAlignment = Alignment.centerRight;
         break;
       case TextAlign.center:
+      default:
         containerAlignment = Alignment.center;
-        break;
-      case TextAlign.justify:
-        containerAlignment = Alignment.centerLeft;
-        break;
     }
-    
+
+    final scaledStyle = element.textStyle?.copyWith(
+      fontSize: (element.textStyle?.fontSize ?? 16) * 0.625,
+      color: isPlaceholder
+          ? Colors.blue
+          : (text.isEmpty ? Colors.grey : element.textStyle?.color),
+      fontStyle: isPlaceholder ? FontStyle.italic : element.textStyle?.fontStyle,
+    ) ?? TextStyle(
+      fontSize: 10,
+      color: isPlaceholder ? Colors.blue : (text.isEmpty ? Colors.grey : Colors.black),
+      fontStyle: isPlaceholder ? FontStyle.italic : null,
+    );
+
     return Container(
       padding: const EdgeInsets.only(left: 4, top: 4, right: 6, bottom: 4),
       alignment: containerAlignment,
@@ -131,22 +141,49 @@ class CardPreview extends StatelessWidget {
         border: Border.all(color: Colors.blue.withOpacity(0.3), width: 1),
         color: Colors.blue.withOpacity(0.05),
       ) : null,
-      child: Text(
-        displayText,
-        style: element.textStyle?.copyWith(
-          fontSize: (element.textStyle?.fontSize ?? 16) * 0.625, // Scale down for preview
-          color: isPlaceholder 
-              ? Colors.blue 
-              : (text.isEmpty ? Colors.grey : element.textStyle?.color),
-          fontStyle: isPlaceholder ? FontStyle.italic : element.textStyle?.fontStyle,
-        ) ?? TextStyle(
-          fontSize: 10,
-          color: isPlaceholder ? Colors.blue : (text.isEmpty ? Colors.grey : Colors.black),
-          fontStyle: isPlaceholder ? FontStyle.italic : null,
-        ),
-        textAlign: textAlign,
-        softWrap: true,
-      ),
+      child: element.textVerticalAlign == 'bottom'
+          ? LayoutBuilder(builder: (context, constraints) {
+              final broken = CardPreview.breakBottomLonger(displayText, scaledStyle, constraints.maxWidth - 10);
+              return Text(broken, style: scaledStyle, textAlign: textAlign, softWrap: true);
+            })
+          : Text(displayText, style: scaledStyle, textAlign: textAlign, softWrap: true),
     );
+  }
+
+  /// Finds a word-split point so the bottom line is wider than the top line.
+  static String breakBottomLonger(String text, TextStyle style, double maxWidth) {
+    if (text.contains('\n') || maxWidth <= 0) return text;
+    final words = text.trim().split(RegExp(r' +'));
+    if (words.length < 2) return text;
+
+    String? best;
+    double bestDiff = double.infinity;
+
+    for (int i = 1; i < words.length; i++) {
+      final top = words.sublist(0, i).join(' ');
+      final bottom = words.sublist(i).join(' ');
+
+      final tpBottom = TextPainter(
+        text: TextSpan(text: bottom, style: style),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+        ellipsis: '\u2026',
+      )..layout(maxWidth: maxWidth);
+
+      if (tpBottom.didExceedMaxLines) break; // bottom no longer fits on one line
+
+      final tpTop = TextPainter(
+        text: TextSpan(text: top, style: style),
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: maxWidth);
+
+      final diff = tpBottom.width - tpTop.width;
+      if (diff > 0 && diff < bestDiff) {
+        bestDiff = diff;
+        best = '$top\n$bottom';
+      }
+    }
+
+    return best ?? text;
   }
 }
