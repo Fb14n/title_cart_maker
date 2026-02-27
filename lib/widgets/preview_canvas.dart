@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
-import '../providers/project_provider.dart';
+import 'package:title_card_maker/providers/project_provider.dart';
 import 'card_preview.dart';
 import 'individual_card_editor_dialog.dart';
 

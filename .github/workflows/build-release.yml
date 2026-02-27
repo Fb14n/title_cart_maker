@@ -2,12 +2,12 @@ name: Build & Release Windows EXE
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - '**'
   workflow_dispatch:
 
 jobs:
-  build-windows:
+  build:
     runs-on: windows-latest
 
     steps:
@@ -17,7 +17,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.32.x'
+          flutter-version: '3.41.2'
           channel: 'stable'
           cache: true
 
@@ -30,15 +30,38 @@ jobs:
       - name: Zip build output
         run: Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath title_card_maker-windows.zip
 
-      - name: Upload artifact (for manual runs)
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: title_card_maker-windows
           path: title_card_maker-windows.zip
 
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Read version from pubspec
+        id: read_version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d '[:space:]')
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: title_card_maker-windows
+
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: "v${{ steps.read_version.outputs.VERSION }}-${{ github.run_number }}"
+          name: "Release v${{ steps.read_version.outputs.VERSION }} (Build ${{ github.run_number }})"
           files: title_card_maker-windows.zip
-          generate_release_notes: true
+          generate_release_notes: trueRun flutter pub get

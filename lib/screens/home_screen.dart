@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
-import '../providers/project_provider.dart';
-import '../widgets/config_panel.dart';
-import '../widgets/preview_canvas.dart';
-import '../widgets/table_import_panel.dart';
-import '../widgets/card_layout_editor.dart';
-import '../widgets/save_options_dialog.dart';
-import '../widgets/card_selection_dialog.dart';
-import '../widgets/image_export_dialog.dart';
-import '../services/pdf_service.dart';
-import '../services/image_service.dart';
-import '../models/save_options.dart';
+import 'package:title_card_maker/providers/project_provider.dart';
+import 'package:title_card_maker/widgets/config_panel.dart';
+import 'package:title_card_maker/widgets/preview_canvas.dart';
+import 'package:title_card_maker/widgets/table_import_panel.dart';
+import 'package:title_card_maker/widgets/card_layout_editor.dart';
+import 'package:title_card_maker/widgets/save_options_dialog.dart';
+import 'package:title_card_maker/widgets/card_selection_dialog.dart';
+import 'package:title_card_maker/widgets/image_export_dialog.dart';
+import 'package:title_card_maker/services/pdf_service.dart';
+import 'package:title_card_maker/services/image_service.dart';
+import 'package:title_card_maker/models/save_options.dart';
 
 class HomeScreen extends StatefulWidget {
   final String? fileToOpen;
@@ -206,21 +206,19 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
     
-    if (selectedIndices == null || selectedIndices.isEmpty) return; // User cancelled or no cards selected
-    
-    // Get only selected cards
-    final selectedCards = selectedIndices.map((index) => provider.cards[index]).toList();
+    if (selectedIndices == null) return; // User cancelled
     
     try {
       await PdfService.generateAndSavePdf(
-        cards: selectedCards,
+        cards: provider.cards,
         layoutConfig: provider.layoutConfig,
+        selectedIndices: selectedIndices.toSet(),
       );
       
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('PDF mit ${selectedCards.length} Karten erfolgreich exportiert!'),
+            content: Text('PDF mit ${selectedIndices.length} Karten erfolgreich exportiert!'),
             backgroundColor: Colors.green,
           ),
         );

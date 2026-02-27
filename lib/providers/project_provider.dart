@@ -2,15 +2,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'dart:convert';
-import '../models/card_data.dart';
-import '../models/layout_config.dart';
-import '../models/text_mode.dart';
-import '../models/layout_mode.dart';
-import '../models/card_layout.dart';
-import '../models/element_type.dart';
-import '../models/card_element.dart';
-import '../models/project_data.dart';
-import '../models/save_options.dart';
+import 'package:title_card_maker/models/card_data.dart';
+import 'package:title_card_maker/models/layout_config.dart';
+import 'package:title_card_maker/models/text_mode.dart';
+import 'package:title_card_maker/models/layout_mode.dart';
+import 'package:title_card_maker/models/card_layout.dart';
+import 'package:title_card_maker/models/element_type.dart';
+import 'package:title_card_maker/models/card_element.dart';
+import 'package:title_card_maker/models/project_data.dart';
+import 'package:title_card_maker/models/save_options.dart';
 
 class ProjectProvider extends ChangeNotifier {
   LayoutConfig _layoutConfig = LayoutConfig();

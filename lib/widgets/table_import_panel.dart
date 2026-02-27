@@ -5,7 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:excel/excel.dart';
 import 'package:csv/csv.dart';
 import 'dart:io';
-import '../providers/project_provider.dart';
+import 'package:title_card_maker/providers/project_provider.dart';
 
 class TableImportPanel extends StatefulWidget {
   const TableImportPanel({super.key});

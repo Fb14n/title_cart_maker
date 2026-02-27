@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/card_data.dart';
+import 'package:title_card_maker/models/card_data.dart';
 
 class CardSelectionDialog extends StatefulWidget {
   final List<CardData> cards;
