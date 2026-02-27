@@ -8,6 +8,7 @@ import 'package:title_card_maker/models/layout_config.dart';
 import 'package:title_card_maker/models/card_element.dart';
 import 'package:title_card_maker/models/element_type.dart';
 import 'package:title_card_maker/models/image_export_options.dart';
+import 'package:title_card_maker/widgets/card_preview.dart';
 
 class ImageService {
   static Future<void> generateAndSaveImages({
@@ -235,15 +236,17 @@ class ImageService {
         break;
     }
     
+    final style = element.textStyle ?? const TextStyle(fontSize: 16, color: Colors.black);
+
     return Container(
       padding: const EdgeInsets.only(left: 4, top: 4, right: 6, bottom: 4),
       alignment: containerAlignment,
-      child: Text(
-        text,
-        style: element.textStyle ?? const TextStyle(fontSize: 16, color: Colors.black),
-        textAlign: textAlign,
-        softWrap: true,
-      ),
+      child: element.textVerticalAlign == 'bottom'
+          ? LayoutBuilder(builder: (context, constraints) {
+              final broken = CardPreview.breakBottomLonger(text, style, constraints.maxWidth - 10);
+              return Text(broken, style: style, textAlign: textAlign, softWrap: true);
+            })
+          : Text(text, style: style, textAlign: textAlign, softWrap: true),
     );
   }
   

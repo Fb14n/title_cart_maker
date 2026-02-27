@@ -287,7 +287,7 @@ class PdfService {
     
     // Compute line break for bottom-longer mode
     final displayText = element.textVerticalAlign == 'bottom'
-        ? _breakBottomLongerPdf(text, textStyle?.fontSize ?? 12, width - 10)
+        ? _breakBottomLongerPdf(text, textStyle, width - 10)
         : text;
 
     return pw.Container(
@@ -316,12 +316,12 @@ class PdfService {
 
   /// Computes a line break so the bottom line is wider than the top.
   /// Uses Flutter's TextPainter with the given font size to measure word widths.
-  static String _breakBottomLongerPdf(String text, double fontSize, double maxWidth) {
+  static String _breakBottomLongerPdf(String text, TextStyle? textStyle, double maxWidth) {
     if (text.contains('\n') || maxWidth <= 0) return text;
     final words = text.trim().split(RegExp(r' +'));
     if (words.length < 2) return text;
 
-    final style = TextStyle(fontSize: fontSize);
+    final style = textStyle ?? const TextStyle(fontSize: 12);
 
     // If the full text fits on one line, no split needed
     final tpFull = TextPainter(
