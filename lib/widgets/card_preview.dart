@@ -156,6 +156,15 @@ class CardPreview extends StatelessWidget {
     final words = text.trim().split(RegExp(r' +'));
     if (words.length < 2) return text;
 
+    // If the full text fits on one line, no split needed
+    final tpFull = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+      ellipsis: '\u2026',
+    )..layout(maxWidth: maxWidth);
+    if (!tpFull.didExceedMaxLines) return text;
+
     String? best;
     double bestDiff = double.infinity;
 
