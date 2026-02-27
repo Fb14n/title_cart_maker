@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'dart:io';
 import 'providers/project_provider.dart';
 import 'screens/home_screen.dart';
+import 'services/file_association_service.dart';
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,6 +17,9 @@ void main(List<String> args) async {
       fileToOpen = potentialFile;
     }
   }
+
+  // Register .tcmaker file association (only does work if path changed or first run)
+  await FileAssociationService.registerIfNeeded();
   
   runApp(MyApp(fileToOpen: fileToOpen));
 }

@@ -9,7 +9,7 @@ Windows Registry Editor Version 5.00
 @="Title Card Maker Project"
 
 [HKEY_CURRENT_USER\Software\Classes\TitleCardMaker.Project\DefaultIcon]
-@="%SystemRoot%\\System32\\SHELL32.dll,1"
+@="C:\\Program Files\\TitleCardMaker\\file_icon.ico,0"
 
 [HKEY_CURRENT_USER\Software\Classes\TitleCardMaker.Project\shell\open\command]
 @="\"C:\\Program Files\\TitleCardMaker\\title_card_maker.exe\" \"%1\""
