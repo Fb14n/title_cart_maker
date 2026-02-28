@@ -16,8 +16,9 @@ class ImageService {
     required LayoutConfig layoutConfig,
     required BuildContext context,
     required ImageExportOptions options,
+    required Set<int> selectedIndices,
   }) async {
-    // Calculate dimensions based on options
+    // Page dimensions in mm
     double pageWidthMm;
     double pageHeightMm;
     
@@ -29,10 +30,10 @@ class ImageService {
       pageHeightMm = options.customHeight!;
     }
     
-    // Convert mm to pixels based on DPI
-    final double mmToPixels = options.dpi / 25.4;
-    final double pageWidth = pageWidthMm * mmToPixels;
-    final double pageHeight = pageHeightMm * mmToPixels;
+    // Pixel ratio: output pixels per mm (avoids oversized logical dimensions
+    // that would exceed the off-screen RenderView's viewport and produce a
+    // zero-size repaint boundary → "invalid image dimensions").
+    final double pixelsPerMm = options.dpi / 25.4;
     
     // Calculate cards per page
     final cardsPerPage = layoutConfig.totalCards;
@@ -69,17 +70,21 @@ class ImageService {
         final endIndex = (startIndex + cardsPerPage).clamp(0, cards.length);
         final cardsOnPage = cards.sublist(startIndex, endIndex);
         
-        // Create the widget to render
+        // Build widget at mm-scale (1 logical unit = 1 mm).
+        // The repaint boundary stays well within any screen viewport,
+        // and pixelsPerMm scales it to the desired DPI output.
         final widget = _buildPageWidget(
           cardsOnPage: cardsOnPage,
           layoutConfig: layoutConfig,
-          pageWidth: pageWidth,
-          pageHeight: pageHeight,
-          mmToPixels: mmToPixels,
+          pageWidth: pageWidthMm,
+          pageHeight: pageHeightMm,
+          mmToPixels: 1.0,
+          startIndex: startIndex,
+          selectedIndices: selectedIndices,
         );
         
-        // Render to image
-        final image = await _widgetToImage(widget, pageWidth, pageHeight);
+        // Render to image at target DPI
+        final image = await _widgetToImage(widget, pageWidthMm, pageHeightMm, pixelsPerMm);
         
         // Save to file
         final extension = options.format == ImageFormat.png ? 'png' : 'jpg';
@@ -87,16 +92,8 @@ class ImageService {
         final filePath = '$outputDir${Platform.pathSeparator}$fileName';
         final file = File(filePath);
         
-        // Convert to bytes
-        if (options.format == ImageFormat.jpg) {
-          // For JPG: convert to PNG first (Flutter doesn't support direct JPG encoding)
-          // In production, use the 'image' package for proper JPG encoding
-          final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-          await file.writeAsBytes(byteData!.buffer.asUint8List());
-        } else {
-          final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-          await file.writeAsBytes(byteData!.buffer.asUint8List());
-        }
+        final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+        await file.writeAsBytes(byteData!.buffer.asUint8List());
         
         image.dispose();
       }
@@ -112,46 +109,65 @@ class ImageService {
     }
   }
   
+  static const double _mmToPoints = 2.83465; // 1 mm = 2.83465 PDF points
+
   static Widget _buildPageWidget({
     required List<CardData> cardsOnPage,
     required LayoutConfig layoutConfig,
     required double pageWidth,
     required double pageHeight,
     required double mmToPixels,
+    int startIndex = 0,
+    Set<int>? selectedIndices,
   }) {
+    final cols = layoutConfig.columns;
+
+    // Use config card dimensions directly – mirrors pdf_service which uses
+    // layoutConfig.cardWidth * mmToPoints for both card container and element sizing.
+    final cardW = layoutConfig.cardWidth * mmToPixels;
+    final cardH = layoutConfig.cardHeight * mmToPixels;
+    final hSpacing = layoutConfig.horizontalSpacing * mmToPixels;
+    final vSpacing = layoutConfig.verticalSpacing * mmToPixels;
+    final totalRows = (cardsOnPage.length / cols).ceil();
+
+    final rows = <Widget>[];
+    for (int r = 0; r < totalRows; r++) {
+      final rowChildren = <Widget>[];
+      for (int c = 0; c < cols; c++) {
+        final idx = r * cols + c;
+        if (c > 0) rowChildren.add(SizedBox(width: hSpacing));
+        if (idx < cardsOnPage.length) {
+          final globalIndex = startIndex + idx;
+          final isSelected = selectedIndices == null || selectedIndices.contains(globalIndex);
+          rowChildren.add(_buildCard(
+            cardData: cardsOnPage[idx],
+            width: cardW,
+            height: cardH,
+            isSelected: isSelected,
+          ));
+        } else {
+          rowChildren.add(SizedBox(width: cardW, height: cardH));
+        }
+      }
+      if (r > 0) rows.add(SizedBox(height: vSpacing));
+      rows.add(Row(mainAxisSize: MainAxisSize.min, children: rowChildren));
+    }
+
     return SizedBox(
-      width: pageWidth,
-      height: pageHeight,
+      width: pageWidth * mmToPixels,
+      height: pageHeight * mmToPixels,
       child: Container(
         color: Colors.white,
-        child: Padding(
-          padding: EdgeInsets.only(
-            left: layoutConfig.marginLeft * mmToPixels,
-            right: layoutConfig.marginRight * mmToPixels,
-            top: layoutConfig.marginTop * mmToPixels,
-            bottom: layoutConfig.marginBottom * mmToPixels,
-          ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return GridView.builder(
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: layoutConfig.columns,
-                  childAspectRatio: layoutConfig.cardWidth / layoutConfig.cardHeight,
-                  crossAxisSpacing: layoutConfig.horizontalSpacing * mmToPixels,
-                  mainAxisSpacing: layoutConfig.verticalSpacing * mmToPixels,
-                ),
-                itemCount: cardsOnPage.length,
-                itemBuilder: (context, index) {
-                  return _buildCard(
-                    cardData: cardsOnPage[index],
-                    width: layoutConfig.cardWidth * mmToPixels,
-                    height: layoutConfig.cardHeight * mmToPixels,
-                  );
-                },
-              );
-            },
-          ),
+        padding: EdgeInsets.only(
+          left: layoutConfig.marginLeft * mmToPixels,
+          right: layoutConfig.marginRight * mmToPixels,
+          top: layoutConfig.marginTop * mmToPixels,
+          bottom: layoutConfig.marginBottom * mmToPixels,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: rows,
         ),
       ),
     );
@@ -161,7 +177,11 @@ class ImageService {
     required CardData cardData,
     required double width,
     required double height,
+    bool isSelected = true,
   }) {
+    if (!isSelected) {
+      return SizedBox(width: width, height: height);
+    }
     final layout = cardData.getEffectiveLayout();
     
     return Container(
@@ -192,7 +212,7 @@ class ImageService {
       height: elementHeight,
       child: element.type == ElementType.image
           ? _buildImageElement(element)
-          : _buildTextElement(element),
+          : _buildTextElement(element, elementWidth),
     );
   }
   
@@ -203,25 +223,27 @@ class ImageService {
       return Container(color: Colors.grey[100]);
     }
     
-    return Image.file(
-      File(imagePath),
-      fit: element.imageFit ?? BoxFit.contain,
-      errorBuilder: (context, error, stackTrace) {
-        return Container(color: Colors.grey[100]);
-      },
+    return ClipRect(
+      child: Image.file(
+        File(imagePath),
+        fit: element.imageFit ?? BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(color: Colors.grey[100]);
+        },
+      ),
     );
   }
   
-  static Widget _buildTextElement(CardElement element) {
+  static Widget _buildTextElement(CardElement element, double elementWidth) {
     final text = element.data as String? ?? '';
     if (text.isEmpty) return Container();
     
-    // Map TextAlign to Container Alignment
-    Alignment containerAlignment;
     final textAlign = element.textAlign ?? TextAlign.center;
+    Alignment containerAlignment;
     switch (textAlign) {
       case TextAlign.left:
       case TextAlign.start:
+      case TextAlign.justify:
         containerAlignment = Alignment.centerLeft;
         break;
       case TextAlign.right:
@@ -230,61 +252,51 @@ class ImageService {
         break;
       case TextAlign.center:
         containerAlignment = Alignment.center;
-        break;
-      case TextAlign.justify:
-        containerAlignment = Alignment.centerLeft;
-        break;
     }
-    
-    final style = element.textStyle ?? const TextStyle(fontSize: 16, color: Colors.black);
+
+    // Convert font size from typographic points to mm.
+    // 1pt = 1/_mmToPoints mm — identical conversion to what pdf_service uses in PDF space.
+    final baseStyle = element.textStyle ?? const TextStyle(fontSize: 16, color: Colors.black);
+    final style = baseStyle.copyWith(
+      fontSize: (baseStyle.fontSize ?? 16) / _mmToPoints,
+    );
+
+    // Padding mirrors pdf_service: left 4pt, right 6pt, top/bottom 4pt.
+    // breakBottomLonger gets container inner width = elementWidth - (4+6)pt in mm.
+    final displayText = element.textVerticalAlign == 'bottom'
+        ? CardPreview.breakBottomLonger(text, style, elementWidth - 10.0 / _mmToPoints)
+        : text;
 
     return Container(
-      padding: const EdgeInsets.only(left: 4, top: 4, right: 6, bottom: 4),
+      padding: EdgeInsets.fromLTRB(
+        4.0 / _mmToPoints, 4.0 / _mmToPoints,
+        6.0 / _mmToPoints, 4.0 / _mmToPoints,
+      ),
       alignment: containerAlignment,
-      child: element.textVerticalAlign == 'bottom'
-          ? LayoutBuilder(builder: (context, constraints) {
-              final broken = CardPreview.breakBottomLonger(text, style, constraints.maxWidth - 10);
-              return Text(broken, style: style, textAlign: textAlign, softWrap: true);
-            })
-          : Text(text, style: style, textAlign: textAlign, softWrap: true),
+      child: Text(displayText, style: style, textAlign: textAlign, softWrap: true),
     );
   }
   
-  static Future<ui.Image> _widgetToImage(Widget widget, double width, double height) async {
-    final RenderRepaintBoundary repaintBoundary = RenderRepaintBoundary();
+  static Future<ui.Image> _widgetToImage(Widget widget, double width, double height, double pixelRatio) async {
+    final repaintBoundary = RenderRepaintBoundary();
+    final pipelineOwner = PipelineOwner();
+    final buildOwner = BuildOwner(focusManager: FocusManager());
 
-    // Versionssichere Offscreen-Render-Pipeline:
-    // Statt ViewConfiguration manuell zu bauen (API driftet zwischen Flutter-Versionen),
-    // verwenden wir die Configuration des aktuellen FlutterView und steuern die Zielgr f6 dfe  fcber pixelRatio.
-    final ui.FlutterView flutterView = ui.PlatformDispatcher.instance.views.first;
+    // Attach as pipeline root WITHOUT a RenderView so that the logical size is
+    // determined purely by our explicit layout constraints – completely
+    // independent of the app window's physical dimensions (avoids the
+    // "invalid image dimensions" crash when physicalSize == Size.zero or
+    // when target pixel dimensions exceed the screen viewport).
+    pipelineOwner.rootNode = repaintBoundary;
 
-    final RenderView renderView = RenderView(
-      view: flutterView,
-      configuration: const ViewConfiguration(devicePixelRatio: 1.0),
-      child: RenderPositionedBox(
-        alignment: Alignment.center,
-        // Das Boundary lebt im RenderTree und wird danach mit einem Widget-Tree befüllt.
-        child: repaintBoundary,
-      ),
-    );
-
-    final PipelineOwner pipelineOwner = PipelineOwner();
-    final BuildOwner buildOwner = BuildOwner(focusManager: FocusManager());
-
-    pipelineOwner.rootNode = renderView;
-    renderView.prepareInitialFrame();
-
-    final RenderObjectToWidgetElement<RenderBox> rootElement = RenderObjectToWidgetAdapter<RenderBox>(
+    final RenderObjectToWidgetElement<RenderBox> rootElement =
+        RenderObjectToWidgetAdapter<RenderBox>(
       container: repaintBoundary,
       child: Directionality(
         textDirection: TextDirection.ltr,
         child: MediaQuery(
           data: const MediaQueryData(),
-          child: SizedBox(
-            width: width,
-            height: height,
-            child: widget,
-          ),
+          child: SizedBox(width: width, height: height, child: widget),
         ),
       ),
     ).attachToRenderTree(buildOwner);
@@ -292,18 +304,20 @@ class ImageService {
     buildOwner.buildScope(rootElement);
     buildOwner.finalizeTree();
 
-    pipelineOwner.flushLayout();
+    // Force the whole subtree to lay out at exactly (width × height).
+    repaintBoundary.layout(
+      BoxConstraints.tightFor(width: width, height: height),
+      parentUsesSize: false,
+    );
+
+    // Attach an OffsetLayer so that flushPaint() can render into it.
+    final rootLayer = OffsetLayer();
+    rootLayer.attach(pipelineOwner);
+    repaintBoundary.scheduleInitialPaint(rootLayer);
+
     pipelineOwner.flushCompositingBits();
     pipelineOwner.flushPaint();
 
-    // Skaliere das Ergebnis so, dass wir ungef e4r auf die gew fcnschte Pixelgr f6 dfe kommen.
-    final double viewLogicalWidth = flutterView.physicalSize.width / flutterView.devicePixelRatio;
-    final double viewLogicalHeight = flutterView.physicalSize.height / flutterView.devicePixelRatio;
-    final double ratioX = viewLogicalWidth > 0 ? (width / viewLogicalWidth) : 1.0;
-    final double ratioY = viewLogicalHeight > 0 ? (height / viewLogicalHeight) : 1.0;
-    final double pixelRatio = (ratioX < ratioY ? ratioX : ratioY).clamp(0.01, 10.0);
-
-    final ui.Image image = await repaintBoundary.toImage(pixelRatio: pixelRatio);
-    return image;
+    return repaintBoundary.toImage(pixelRatio: pixelRatio);
   }
 }

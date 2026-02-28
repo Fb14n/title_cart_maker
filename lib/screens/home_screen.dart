@@ -13,6 +13,7 @@ import 'package:title_card_maker/widgets/image_export_dialog.dart';
 import 'package:title_card_maker/services/pdf_service.dart';
 import 'package:title_card_maker/services/image_service.dart';
 import 'package:title_card_maker/models/save_options.dart';
+import 'package:title_card_maker/models/image_export_options.dart';
 
 class HomeScreen extends StatefulWidget {
   final String? fileToOpen;
@@ -152,25 +153,23 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
     
-    if (selectedIndices == null || selectedIndices.isEmpty) return; // User cancelled or no cards selected
-    
-    // Get only selected cards
-    final selectedCards = selectedIndices.map((index) => provider.cards[index]).toList();
+    if (selectedIndices == null) return; // User cancelled
     
     try {
       await ImageService.generateAndSaveImages(
-        cards: selectedCards,
+        cards: provider.cards,
         layoutConfig: provider.layoutConfig,
         context: context,
         options: exportOptions,
+        selectedIndices: selectedIndices.toSet(),
       );
       
       if (context.mounted) {
-        final numberOfPages = (selectedCards.length / provider.layoutConfig.totalCards).ceil();
-        final formatName = exportOptions.format.name.toUpperCase();
+        final numberOfPages = (provider.cards.length / provider.layoutConfig.totalCards).ceil();
+        final formatName = exportOptions.format == ImageFormat.png ? 'PNG' : 'JPG';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$numberOfPages $formatName-Seite(n) mit ${selectedCards.length} Karten erfolgreich exportiert!'),
+            content: Text('$numberOfPages $formatName-Seite(n) mit ${selectedIndices.length} Karten erfolgreich exportiert!'),
             backgroundColor: Colors.green,
           ),
         );
