@@ -13,7 +13,8 @@ A powerful **Windows desktop application** built with Flutter for creating, desi
 - **Zoom** the editor canvas for fine-grained placement
 - **Keyboard shortcuts** for pixel-perfect nudging of selected elements
 - **Color picker** for card background colors
-- **Rich text styling** — font family, size, weight (bold), style (italic), underline, color, and alignment
+- **Rich text styling** — font family, size (8–72 pt), weight (bold), style (italic), underline, color, and alignment
+- **Text vertical distribution** — choose between natural top-to-bottom wrapping or *bottom-longer* mode where the lower line is wider than the upper (ideal for typographically balanced two-line titles)
 
 ### 📐 Page Layout Configuration
 | Setting | Range | Default |
@@ -42,12 +43,16 @@ Bulk-populate card text from external data sources:
 - Exports to A4 PDF, one sheet per page
 - **Card selection dialog** — choose exactly which cards to export; deselected cards leave blank spaces (their exact size is preserved, no stretching)
 - Page-level and individual card-level selection with tri-state checkboxes
-- Auto-generated release notes in GitHub Releases
+- Font sizes rendered at true typographic point sizes (1 pt = 1/2.835 mm)
+- Text vertical distribution (*bottom-longer*) reproduced faithfully in the PDF output
 
 #### Image Export
 - Export page sheets as **PNG** or **JPG**
 - Choose resolution: **150 DPI**, **300 DPI**, or **600 DPI**
 - Page size: **A4** or fully **custom dimensions** (mm)
+- **Card selection dialog** — same selection behaviour as PDF export; unselected cards render as blank placeholders
+- Visual fidelity matches the PDF export: identical font sizes, padding, element positioning, and text vertical distribution
+- Off-screen rendering pipeline completely independent of the app window size (no crash when the window is minimised or at non-standard sizes)
 
 ### 💾 Project Save & Load
 - Save your entire project (layout, all cards, images, table data) to a `.json` file
@@ -120,7 +125,7 @@ lib/
 │   ├── layout_config.dart      # Page grid configuration (columns, rows, sizes)
 │   ├── layout_mode.dart        # Enum: global or individual layout mode
 │   ├── project_data.dart       # Full project save/load model
-│   ├── image_export_options.dart
+│   ├── image_export_options.dart  # DPI, format, page size for image export
 │   ├── save_options.dart
 │   └── text_mode.dart
 ├── providers/
@@ -129,7 +134,7 @@ lib/
 │   └── home_screen.dart        # Main application screen
 ├── services/
 │   ├── pdf_service.dart        # PDF generation & export logic
-│   ├── image_service.dart      # Image rendering & export logic
+│   ├── image_service.dart      # Off-screen image rendering & export logic
 │   └── import_service.dart     # Project file import/export
 └── widgets/
     ├── card_layout_editor.dart  # Drag-and-drop card editor canvas
@@ -166,3 +171,4 @@ lib/
 ## 📄 License
 
 This project is provided as-is for personal and internal use.
+
